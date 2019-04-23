@@ -97,10 +97,10 @@ function group_replace_directives() {
      /^replace [(]/      { inreplace=1; next                   }
      inreplace && /^[)]/ { inreplace=0; next                   }
      inreplace           { print > \"${go_mod_replace}\"; next }
-     
+
      # print ungrouped replace directives with the replace directive trimmed
      /^replace [^(]/ { sub(/^replace /,\"\"); print > \"${go_mod_replace}\"; next }
-     
+
      # otherwise print to the noreplace file
      { print > \"${go_mod_noreplace}\" }
   "
@@ -130,7 +130,7 @@ function add_generated_comments() {
   echo "${comments}"         >  go.mod
   echo ""                    >> go.mod
   cat "${go_mod_nocomments}" >> go.mod
-  
+
   # Format
   go mod edit -fmt
 }
@@ -218,7 +218,7 @@ for repo in $(cat "${TMP_DIR}/tidy_unordered.txt"); do
     echo "=== computing tools imports for ${repo}" >> "${LOG_FILE}"
     go list -tags=tools all >>"${LOG_FILE}" 2>&1
 
-    # capture module dependencies 
+    # capture module dependencies
     go list -m -f '{{if not .Main}}{{.Path}}{{end}}' all > "${tmp_go_deps}"
 
     # restore the original go.mod file
@@ -257,9 +257,9 @@ $(go mod why ${loopback_deps})"
 
     # prune replace directives that pin to the naturally selected version
     go list -m -json all |
-      jq -r 'select(.Replace != null) | 
-             select(.Path == .Replace.Path) | 
-             select(.Version == .Replace.Version) | 
+      jq -r 'select(.Replace != null) |
+             select(.Path == .Replace.Path) |
+             select(.Version == .Replace.Version) |
              "-dropreplace \(.Replace.Path)"' |
     xargs -L 100 go mod edit -fmt
 
@@ -315,6 +315,12 @@ kube::log::status "vendor: creating OWNERS file"
 rm -f "Godeps/OWNERS" "vendor/OWNERS"
 cat <<__EOF__ > "Godeps/OWNERS"
 # See the OWNERS docs at https://go.k8s.io/owners
+
+kube::log::status "dependencies: evaluating incoming and outgoing dependencies"
+go list -mod=vendor -json -tags linux -e all > "${TMP_DIR}/deps.json"
+go run eval-deps.go "${TMP_DIR}/deps.json"
+kube::log::status "updated ${KUBE_ROOT}/vendor/dependencies.csv"
+rm -f "${TMP_DIR}/deps.json"
 
 approvers:
 - dep-approvers
