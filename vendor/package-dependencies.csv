@@ -295,17 +295,14 @@ golang.org/x/crypto/pkcs12:5:72
 github.com/onsi/gomega:0:72
 golang.org/x/crypto/ocsp:5:69
 github.com/onsi/gomega/matchers:1:67
-golang.org/x/tools/go/packages:0:66
 github.com/opencontainers/runc/libcontainer/cgroups/fs:11:62
 github.com/opencontainers/runc/libcontainer/configs/validate:10:62
 github.com/google/cadvisor/zfs:3:62
 github.com/coreos/etcd/etcdserver/stats:10:59
 github.com/spf13/cobra/doc:0:58
 github.com/mistifyio/go-zfs:18:57
-golang.org/x/tools/go/gcexportdata:1:56
 github.com/opencontainers/runc/libcontainer/cgroups:12:55
 github.com/coreos/go-systemd/dbus:11:55
-golang.org/x/tools/go/internal/gcimporter:2:55
 golang.org/x/net/html/charset:2:53
 github.com/pborman/uuid:19:52
 github.com/godbus/dbus:12:52
@@ -327,13 +324,10 @@ github.com/coreos/etcd/raft:15:49
 github.com/coreos/etcd/pkg/netutil:11:49
 sigs.k8s.io/kustomize/pkg/resmap:6:49
 github.com/hpcloud/tail:2:49
-golang.org/x/tools/go/internal/packagesdriver:1:49
-golang.org/x/tools/internal/gopathwalk:1:49
 github.com/docker/docker/pkg/jsonmessage:0:49
 github.com/globalsign/mgo/bson:5:48
 github.com/containerd/containerd/errdefs:3:48
 github.com/containernetworking/cni/pkg/invoke:1:48
-golang.org/x/tools/go/internal/cgo:1:48
 github.com/prometheus/procfs:27:47
 github.com/docker/docker/pkg/mount:17:47
 github.com/spf13/cobra:2:47
@@ -550,7 +544,6 @@ github.com/hpcloud/tail/util:4:30
 github.com/pmezard/go-difflib/difflib:3:30
 github.com/google/cadvisor/storage:2:30
 github.com/onsi/gomega/matchers/support/goraph/bipartitegraph:2:30
-golang.org/x/tools/internal/fastwalk:2:30
 gonum.org/v1/gonum/lapack/lapack64:2:30
 gopkg.in/gcfg.v1/scanner:1:30
 golang.org/x/tools/benchmark/parse:0:30
@@ -737,6 +730,5 @@ github.com/cloudflare/cfssl/info:2:0
 github.com/codedellemc/goscaleio/types/v1:1:0
 github.com/google/cadvisor/version:1:0
 golang.org/x/crypto/salsa20/salsa:1:0
-golang.org/x/tools/internal/semver:1:0
 vbom.ml/util/sortorder:0:0
 

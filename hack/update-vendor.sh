@@ -319,7 +319,7 @@ cat <<__EOF__ > "Godeps/OWNERS"
 kube::log::status "dependencies: evaluating incoming and outgoing dependencies"
 go list -mod=vendor -json -tags linux -e all > "${TMP_DIR}/deps.json"
 go run eval-deps.go "${TMP_DIR}/deps.json"
-kube::log::status "updated ${KUBE_ROOT}/vendor/dependencies.csv"
+kube::log::status "updated ${KUBE_ROOT}/vendor/package-dependencies.csv and ${KUBE_ROOT}/vendor/module-dependencies.csv"
 rm -f "${TMP_DIR}/deps.json"
 
 approvers:

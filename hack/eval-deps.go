@@ -17,20 +17,37 @@ var (
 	ignorePackage = map[string]bool{"runtime/cgo": true}
 )
 
+// Module representation for golang module
+// https://golang.org/pkg/cmd/go/internal/list
+type Module struct {
+	Path     string
+    Indirect bool         // is this module only an indirect dependency of main module?
+    Dir      string       // directory holding files for this module, if any
+}
+
 // Package is the representation of package required
 // for analysis
 type Package struct {
-	Dir        string
-	ImportPath string
-	Standard   bool
-	Ignore     bool
-	Deps       []string
-	Info 	   PackageInfo
+	Dir            string
+	ImportPath     string
+	Standard       bool
+	Ignore         bool
+	Deps           []string
+	Module         Module
+	PackageInfo    PackageInfo
+	ModuleInfo     ModuleInfo
 }
 
 // PackageInfo contains the information we need to
 // take out after analysis for the package
 type PackageInfo struct {
+	IncomingDepdencyCount int
+	OutgoingDependencyCount int
+}
+
+// ModuleInfo contains the information we need to
+// take out after analysis for the module
+type ModuleInfo struct {
 	IncomingDepdencyCount int
 	OutgoingDependencyCount int
 }
@@ -57,7 +74,15 @@ func (p *Package) setIgnore() {
 
 // setPacakgeInfo sets the package info with incoming and outgoing deps
 func (p *Package) setPackageInfo(in int, out int) {
-	p.Info = PackageInfo{
+	p.PackageInfo = PackageInfo{
+		IncomingDepdencyCount: in,
+		OutgoingDependencyCount: out,
+	}
+}
+
+// setModuleInfo sets the package info with incoming and outgoing deps
+func (p *Package) setModuleInfo(in int, out int) {
+	p.ModuleInfo = ModuleInfo{
 		IncomingDepdencyCount: in,
 		OutgoingDependencyCount: out,
 	}
@@ -68,6 +93,8 @@ type Builder struct {
 	incomingPackages map[string]map[string]bool
 	outgoingPackages map[string][]string
 	ignoredPackages map[string]bool
+	incomingModules map[string][]string
+	outgoingModules map[string]map[string]bool
 }
 
 func NewBuilder() *Builder {
@@ -76,6 +103,8 @@ func NewBuilder() *Builder {
 		incomingPackages: map[string]map[string]bool{},
 		outgoingPackages: map[string][]string{},
 		ignoredPackages: map[string]bool{},
+		incomingModules: map[string][]string{},
+		outgoingModules: map[string]map[string]bool{},
 	}
 }
 
@@ -108,6 +137,7 @@ func(b *Builder) setIgnoredPackages() {
 
 // evalDeps evaluates the incoming and outgoing dependencies
 func(b *Builder) evalDeps() {
+	// Evaluate depdencies package wise
 	for _, pkg := range b.packages {
 		if pkg.Ignore == true {
 			continue
@@ -130,6 +160,31 @@ func(b *Builder) evalDeps() {
 		)
 	}
 
+	// Evaluate dependencies module wise
+	for i, _ := range b.packages {
+		fmt.Println(b.packages[i].ImportPath)
+		if (b.packages[i].Module.Path == "") {
+			fmt.Println(b.packages[i].Module.Path)
+			for incomingPackage, _ := range b.incomingPackages[b.packages[i].ImportPath] {
+				fmt.Println(incomingPackage)
+				b.incomingModules[b.packages[i].Module.Path] = append(
+					b.incomingModules[b.packages[i].Module.Path],
+					incomingPackage,
+				)
+			}
+			for _, outgoingPackage := range b.outgoingPackages[b.packages[i].ImportPath] {
+				b.outgoingModules[b.packages[i].Module.Path][outgoingPackage] = true
+			}
+		}
+	}
+	for i, _ := range b.packages {
+		if (b.packages[i].Module.Path != "") {
+			b.packages[i].setModuleInfo(
+				len(b.incomingModules[b.packages[i].Module.Path]),
+				len(b.outgoingModules[b.packages[i].Module.Path]),
+			)
+		}
+	}
 }
 
 // sortDeps sorts the depdendecies as Name then Incoming then Outgoing order
@@ -139,27 +194,38 @@ func(b *Builder) sortDeps() {
 	})
 
 	sort.SliceStable(b.packages, func(i, j int) bool {
-		return b.packages[i].Info.IncomingDepdencyCount > b.packages[j].Info.IncomingDepdencyCount
+		return b.packages[i].PackageInfo.IncomingDepdencyCount > b.packages[j].PackageInfo.IncomingDepdencyCount
 	})
 
 	sort.SliceStable(b.packages, func(i, j int) bool {
-		return b.packages[i].Info.OutgoingDependencyCount > b.packages[j].Info.OutgoingDependencyCount
+		return b.packages[i].PackageInfo.OutgoingDependencyCount > b.packages[j].PackageInfo.OutgoingDependencyCount
 	})
 }
 
-func(b *Builder) showDeps() {
+func(b *Builder) showDepsPackageWise() {
 	for _, pkg := range b.packages {
 		if pkg.Ignore == true {
 			continue
 		}
-		fmt.Printf("%s:%d:%d\n", pkg.ImportPath, pkg.Info.IncomingDepdencyCount, pkg.Info.OutgoingDependencyCount)
+		fmt.Printf("package: %s, incoming: %d, outgoing: %d\n", pkg.ImportPath, pkg.PackageInfo.IncomingDepdencyCount, pkg.PackageInfo.OutgoingDependencyCount)
 	}
 }
 
-// saveDeps save the result of analysis in the file
-// this will help in seeing the diffs with every depdendecy change
-func(b *Builder) saveDeps() {
-	f, err := os.Create("./vendor/dependencies.csv")
+func(b *Builder) showDepsModuleWise() {
+	for _, pkg := range b.packages {
+		if pkg.Ignore == true {
+			continue
+		}
+		if (pkg.Module.Path != "") {
+			fmt.Printf("module: %s, incoming: %d, outgoing: %d\n", pkg.Module.Path, pkg.ModuleInfo.IncomingDepdencyCount, pkg.ModuleInfo.OutgoingDependencyCount)
+		}
+	}
+}
+
+// savePackageDeps save the result of analysis in the file
+// this will help in seeing the diffs with every dependency change
+func(b *Builder) savePackageDeps() {
+	f, err := os.Create("./vendor/package-dependencies.csv")
 	checkErr(err)
 	defer f.Close()
 
@@ -171,9 +237,9 @@ func(b *Builder) saveDeps() {
 		}
 		buffer.WriteString(pkg.ImportPath)
 		buffer.WriteString(":")
-		buffer.WriteString(strconv.Itoa(pkg.Info.IncomingDepdencyCount))
+		buffer.WriteString(strconv.Itoa(pkg.PackageInfo.IncomingDepdencyCount))
 		buffer.WriteString(":")
-		buffer.WriteString(strconv.Itoa(pkg.Info.OutgoingDependencyCount))
+		buffer.WriteString(strconv.Itoa(pkg.PackageInfo.OutgoingDependencyCount))
 		buffer.WriteString("\n")
 	}
 	fmt.Fprint(
@@ -208,6 +274,8 @@ func main() {
 	builder.setIgnoredPackages()
 	builder.evalDeps()
 	builder.sortDeps()
-	builder.showDeps()
-	builder.saveDeps()
+	// builder.showDepsPackageWise()
+	builder.showDepsModuleWise()
+	// builder.savePackageDeps()
+	// builder.saveModuleDeps()
 }
